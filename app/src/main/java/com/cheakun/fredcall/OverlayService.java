@@ -55,7 +55,7 @@ public class OverlayService extends Service {
     private boolean accepted = false;
     private boolean oneShot = false;
     private int gapSec = 5;
-    private static final int LINES = 5;
+    private static final int LINES = 1;
     private int seg = 0, durMs = 0;
     private int seconds = 0;
 
@@ -234,11 +234,11 @@ public class OverlayService extends Service {
         @Override public void run() {
             if (mp == null || banner == null) return;
             if (seg >= LINES) { endCall(); return; }
-            int lead = 600, tail = 600;
+            int lead = 0, tail = 0;
             int usable = Math.max(1000, durMs - lead - tail);
             int chunk = usable / LINES;
             int start = lead + seg * chunk;
-            int len = (int) (chunk * 0.65f);
+            int len = durMs;
             try {
                 mp.setVolume(1f, 1f);
                 mp.seekTo(start, MediaPlayer.SEEK_CLOSEST);
