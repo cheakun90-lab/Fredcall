@@ -47,6 +47,7 @@ public class OverlayService extends Service {
     private View acceptBtn;
     private MediaPlayer mp;
     private Ringtone ring;
+    private MediaPlayer ringMp;
     private Vibrator vib;
 
     private String callerName = "Fredbear";
@@ -301,11 +302,26 @@ public class OverlayService extends Service {
 
     private void startRing() {
         try {
-            ring = RingtoneManager.getRingtone(this,
-                    RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE));
-            if (ring != null) {
-                if (Build.VERSION.SDK_INT >= 28) ring.setLooping(true);
-                ring.play();
+            String f = findAudio();
+            if (f != null) {
+                AssetFileDescriptor afd = getAssets().openFd(f);
+                ringMp = new MediaPlayer();
+                ringMp.setAudioAttributes(new AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build());
+                ringMp.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
+                afd.close();
+                ringMp.setLooping(true);
+                ringMp.setVolume(1f, 1f);
+                ringMp.prepare();
+                ringMp.start();
+            } else {
+                ring = RingtoneManager.getRingtone(this,
+                        RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE));
+                if (ring != null) {
+                    if (Build.VERSION.SDK_INT >= 28) ring.setLooping(true);
+                    ring.play();
+                }
             }
             vib = (Vibrator) getSystemService(VIBRATOR_SERVICE);
             if (vib != null) vib.vibrate(VibrationEffect.createWaveform(new long[]{0, 800, 800}, 0));
@@ -314,6 +330,8 @@ public class OverlayService extends Service {
 
     private void stopRing() {
         try { if (ring != null) ring.stop(); } catch (Exception ignored) {}
+        try { if (ringMp != null) { ringMp.stop(); ringMp.release(); } } catch (Exception ignored) {}
+        ringMp = null;
         try { if (vib != null) vib.cancel(); } catch (Exception ignored) {}
         ring = null;
     }
