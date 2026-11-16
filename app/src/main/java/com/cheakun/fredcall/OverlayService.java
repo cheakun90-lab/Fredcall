@@ -302,27 +302,27 @@ public class OverlayService extends Service {
 
     private void startRing() {
         try {
-            String f = findAudio();
-            if (f != null) {
-                AssetFileDescriptor afd = getAssets().openFd(f);
-                ringMp = new MediaPlayer();
-                ringMp.setAudioAttributes(new AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_MEDIA)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build());
-                ringMp.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
-                afd.close();
-                ringMp.setLooping(true);
-                ringMp.setVolume(1f, 1f);
-                ringMp.prepare();
-                ringMp.start();
-            } else {
+            android.net.Uri uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
+            ringMp = new MediaPlayer();
+            ringMp.setAudioAttributes(new AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build());
+            ringMp.setDataSource(this, uri);
+            ringMp.setLooping(true);
+            ringMp.prepare();
+            ringMp.start();
+        } catch (Exception e) {
+            try {
+                if (ringMp != null) { ringMp.release(); ringMp = null; }
                 ring = RingtoneManager.getRingtone(this,
                         RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE));
                 if (ring != null) {
                     if (Build.VERSION.SDK_INT >= 28) ring.setLooping(true);
                     ring.play();
                 }
-            }
+            } catch (Exception ignored) {}
+        }
+        try {
             vib = (Vibrator) getSystemService(VIBRATOR_SERVICE);
             if (vib != null) vib.vibrate(VibrationEffect.createWaveform(new long[]{0, 800, 800}, 0));
         } catch (Exception ignored) {}
