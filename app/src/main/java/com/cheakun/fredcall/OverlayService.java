@@ -56,7 +56,7 @@ public class OverlayService extends Service {
     private boolean accepted = false;
     private boolean oneShot = false;
     private int gapSec = 5;
-    private static final int LINES = 1;
+    private static final int LINES = 5;
     private int seg = 0, durMs = 0;
     private int seconds = 0;
 
@@ -235,11 +235,11 @@ public class OverlayService extends Service {
         @Override public void run() {
             if (mp == null || banner == null) return;
             if (seg >= LINES) { endCall(); return; }
-            int lead = 0, tail = 0;
+            int lead = 600, tail = 600;
             int usable = Math.max(1000, durMs - lead - tail);
             int chunk = usable / LINES;
             int start = lead + seg * chunk;
-            int len = durMs;
+            int len = (int) (chunk * 0.65f);
             try {
                 mp.setVolume(1f, 1f);
                 mp.seekTo(start, MediaPlayer.SEEK_CLOSEST);
@@ -302,12 +302,13 @@ public class OverlayService extends Service {
 
     private void startRing() {
         try {
-            android.net.Uri uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
             ringMp = new MediaPlayer();
             ringMp.setAudioAttributes(new AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build());
-            ringMp.setDataSource(this, uri);
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build());
+            AssetFileDescriptor rafd = getAssets().openFd("ring.mp3");
+            ringMp.setDataSource(rafd.getFileDescriptor(), rafd.getStartOffset(), rafd.getLength());
+            rafd.close();
             ringMp.setLooping(true);
             ringMp.prepare();
             ringMp.start();
