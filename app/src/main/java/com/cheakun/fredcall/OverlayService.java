@@ -56,6 +56,7 @@ public class OverlayService extends Service {
     private boolean accepted = false;
     private boolean oneShot = false;
     private int gapSec = 5;
+    private boolean noPause = false;
     private static final int LINES = 5;
     private int seg = 0, durMs = 0;
     private int seconds = 0;
@@ -90,6 +91,7 @@ public class OverlayService extends Service {
             minS = intent.getIntExtra("min", minS);
             maxS = intent.getIntExtra("max", maxS);
             gapSec = Math.max(1, intent.getIntExtra("gap", gapSec));
+            noPause = intent.getBooleanExtra("nopause", noPause);
         }
         if ("CALL_NOW".equals(action)) {
             oneShot = true; auto = false;
@@ -228,7 +230,15 @@ public class OverlayService extends Service {
             seg = 0;
             if (sub != null) sub.setText("00:00");
             h.postDelayed(tick, 1000);
-            h.postDelayed(playSeg, 700);   // short pause after you answer
+            if (noPause) {
+                mp.setOnCompletionListener(m -> {
+                    shake(false);
+                    h.postDelayed(this::endCall, 500);
+                });
+                h.postDelayed(playAll, 700);
+            } else {
+                h.postDelayed(playSeg, 700);   // short pause after you answer
+            }
         } catch (Exception e) {
             endCall();
         }
@@ -253,6 +263,18 @@ public class OverlayService extends Service {
             shake(true);
             h.postDelayed(fadeSeg, Math.max(100, len - 150));
             h.postDelayed(stopSeg, len);
+        }
+    };
+    // "No waiting" mode: play the whole clip straight through, no pauses.
+    private final Runnable playAll = new Runnable() {
+        @Override public void run() {
+            if (mp == null || banner == null) return;
+            try {
+                mp.setVolume(1f, 1f);
+                mp.seekTo(0);
+                mp.start();
+            } catch (Exception e) { endCall(); return; }
+            shake(true);
         }
     };
     private final Runnable fadeSeg = () -> {

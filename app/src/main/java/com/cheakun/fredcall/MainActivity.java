@@ -9,6 +9,8 @@ import android.provider.Settings;
 import android.text.InputType;
 import android.view.Gravity;
 import android.widget.Button;
+import android.widget.CheckBox;
+import android.content.SharedPreferences;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -23,6 +25,7 @@ import java.io.OutputStream;
 public class MainActivity extends Activity {
 
     private EditText nameEt, minEt, maxEt, gapEt;
+    private CheckBox noPauseCb;
 
     @Override
     protected void onCreate(Bundle b) {
@@ -47,6 +50,15 @@ public class MainActivity extends Activity {
         maxEt = field(root, "Max seconds between calls", "90", InputType.TYPE_CLASS_NUMBER);
 
         gapEt = field(root, "Pause between its lines (sec)", "5", InputType.TYPE_CLASS_NUMBER);
+
+        SharedPreferences prefs = getSharedPreferences("fred", MODE_PRIVATE);
+        noPauseCb = new CheckBox(this);
+        noPauseCb.setText("No waiting (play talking audio straight through)");
+        noPauseCb.setChecked(prefs.getBoolean("nopause", false));
+        noPauseCb.setOnCheckedChangeListener((cb, on) ->
+                prefs.edit().putBoolean("nopause", on).apply());
+        root.addView(noPauseCb, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
         button(root, "Choose ring audio", v -> pick("audio/*", 10));
         button(root, "Choose talking audio", v -> pick("audio/*", 11));
@@ -108,6 +120,7 @@ public class MainActivity extends Activity {
         i.putExtra("min", parse(minEt, 30));
         i.putExtra("max", parse(maxEt, 90));
         i.putExtra("gap", parse(gapEt, 5));
+        i.putExtra("nopause", noPauseCb.isChecked());
         if (action.equals("STOP")) {
             stopService(new Intent(this, OverlayService.class));
         } else {
