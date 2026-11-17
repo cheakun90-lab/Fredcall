@@ -15,6 +15,11 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+
 public class MainActivity extends Activity {
 
     private EditText nameEt, minEt, maxEt, gapEt;
@@ -43,6 +48,16 @@ public class MainActivity extends Activity {
 
         gapEt = field(root, "Pause between its lines (sec)", "5", InputType.TYPE_CLASS_NUMBER);
 
+        button(root, "Choose ring audio", v -> pick("audio/*", 10));
+        button(root, "Choose talking audio", v -> pick("audio/*", 11));
+        button(root, "Choose picture", v -> pick("image/*", 12));
+        button(root, "Reset audio and picture to default", v -> {
+            new File(getFilesDir(), "user_ring").delete();
+            new File(getFilesDir(), "user_call").delete();
+            new File(getFilesDir(), "user_avatar").delete();
+            Toast.makeText(this, "Back to default", Toast.LENGTH_SHORT).show();
+        });
+
         button(root, "1. Allow overlay permission", v -> {
             startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                     Uri.parse("package:" + getPackageName())));
@@ -56,6 +71,30 @@ public class MainActivity extends Activity {
         sv.setFillViewport(true);
         sv.addView(root);
         setContentView(sv);
+    }
+
+    private void pick(String type, int code) {
+        Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        i.addCategory(Intent.CATEGORY_OPENABLE);
+        i.setType(type);
+        startActivityForResult(i, code);
+    }
+
+    @Override
+    protected void onActivityResult(int req, int res, Intent data) {
+        super.onActivityResult(req, res, data);
+        if (res != RESULT_OK || data == null || data.getData() == null) return;
+        String name = req == 10 ? "user_ring" : req == 11 ? "user_call" : req == 12 ? "user_avatar" : null;
+        if (name == null) return;
+        try (InputStream in = getContentResolver().openInputStream(data.getData());
+             OutputStream out = new FileOutputStream(new File(getFilesDir(), name))) {
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+            Toast.makeText(this, "Saved", Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            Toast.makeText(this, "Could not load that file", Toast.LENGTH_LONG).show();
+        }
     }
 
     private void send(String action) {

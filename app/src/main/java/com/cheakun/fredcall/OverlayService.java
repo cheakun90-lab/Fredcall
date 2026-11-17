@@ -205,19 +205,24 @@ public class OverlayService extends Service {
         if (acceptBtn != null) acceptBtn.setVisibility(View.GONE);
 
         String f = findAudio();
-        if (f == null) {
+        java.io.File userCall = new java.io.File(getFilesDir(), "user_call");
+        if (f == null && !userCall.exists()) {
             Toast.makeText(this, "Put call.mp3 in app/src/main/assets", Toast.LENGTH_LONG).show();
             endCall();
             return;
         }
         try {
-            AssetFileDescriptor afd = getAssets().openFd(f);
             mp = new MediaPlayer();
             mp.setAudioAttributes(new AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_MEDIA)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build());
-            mp.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
-            afd.close();
+            if (userCall.exists()) {
+                mp.setDataSource(userCall.getAbsolutePath());
+            } else {
+                AssetFileDescriptor afd = getAssets().openFd(f);
+                mp.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
+                afd.close();
+            }
             mp.prepare();
             durMs = mp.getDuration();
             seg = 0;
@@ -306,9 +311,14 @@ public class OverlayService extends Service {
             ringMp.setAudioAttributes(new AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_MEDIA)
                     .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build());
-            AssetFileDescriptor rafd = getAssets().openFd("ring.mp3");
-            ringMp.setDataSource(rafd.getFileDescriptor(), rafd.getStartOffset(), rafd.getLength());
-            rafd.close();
+            java.io.File userRing = new java.io.File(getFilesDir(), "user_ring");
+            if (userRing.exists()) {
+                ringMp.setDataSource(userRing.getAbsolutePath());
+            } else {
+                AssetFileDescriptor rafd = getAssets().openFd("ring.mp3");
+                ringMp.setDataSource(rafd.getFileDescriptor(), rafd.getStartOffset(), rafd.getLength());
+                rafd.close();
+            }
             ringMp.setLooping(true);
             ringMp.prepare();
             ringMp.start();
@@ -351,6 +361,13 @@ public class OverlayService extends Service {
     }
 
     private Bitmap loadAvatar() {
+        try {
+            java.io.File ua = new java.io.File(getFilesDir(), "user_avatar");
+            if (ua.exists()) {
+                Bitmap ub = BitmapFactory.decodeFile(ua.getAbsolutePath());
+                if (ub != null) return ub;
+            }
+        } catch (Exception ignored) {}
         for (String n : new String[]{"avatar.png", "avatar.jpg"}) {
             try (InputStream is = getAssets().open(n)) {
                 return BitmapFactory.decodeStream(is);
